@@ -1,21 +1,5 @@
 import requests
-
-
-# headers = {
-#     "accept": "application/json",
-#     "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTI3NGFmYTRlNTUyMjRjYzRlN2Q0NmNlMTNkOTZjOSIsInN1YiI6IjVkNmZhMWZmNzdjMDFmMDAxMDU5NzQ4OSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.lbpgyXlOXwrbY0mUmP-zQpNAMCw_h-oaudAJB6Cn5c8"
-# }
-#
-# url = "https://api.themoviedb.org/3/discover/movie"
-#
-# params = {
-#     'include_adult': False,
-#     'include_video': False,
-#     'sort_by': 'popularity.desc'
-# }
-
-# response = requests.get(url, params=params, headers=headers)
-# print(response.json())
+from collections import Counter
 
 
 class MovieDataGrabber:
@@ -121,6 +105,12 @@ class MovieDataGrabber:
                 return genre['id']
         return None
 
+    def get_genre_name_by_id(self, genre_id):
+        for genre in self.genres_data.get('genres', []):
+            if genre['id'] == genre_id:
+                return genre['name']
+        return None
+
     def delete_movie_by_genre(self, genre):
         # genre_ids = self.data.get('genre_ids', [])
         genre_id = self.get_genre_id_by_name(genre)
@@ -130,6 +120,18 @@ class MovieDataGrabber:
                 genre_ids_to_delete.add(movie['id'])
 
         self.data = [movie for movie in self.data if movie['id'] not in genre_ids_to_delete]
+
+    def names_of_most_popular_genres(self, count=1):
+        all_genre_ids = [genre_id for movie in self.data for genre_id in movie.get('genre_ids', [])]
+
+        genre_id_counts = Counter(all_genre_ids)
+
+        most_common_genre_ids = genre_id_counts.most_common(count)
+
+        most_common_genre_names = [genre['name'] for genre_id, _ in most_common_genre_ids
+                                   for genre in self.genres_data['genres'] if genre['id'] == genre_id]
+
+        return most_common_genre_names
 
 
 def main():
@@ -178,6 +180,9 @@ def main():
     data_from_pages = movie_grabber.get_all_data()
     print('Movies data after removing genre "Action": ')
     print(data_from_pages)
+
+    most_popular_genres = movie_grabber.names_of_most_popular_genres(count=3)
+    print("Most popular genres:", most_popular_genres)
 
 
 if __name__ == '__main__':
