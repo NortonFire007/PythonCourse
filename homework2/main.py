@@ -23,7 +23,8 @@ class MovieDataGrabber:
         self.api_key = api_key
         self.num_pages = num_pages
         self.url = "https://api.themoviedb.org/3/discover/movie"
-
+        self.data = None
+        self.genres_data = None
         self.headers = {
             "accept": "application/json",
             "Authorization": f"Bearer {self.api_key}"
@@ -34,6 +35,8 @@ class MovieDataGrabber:
             'include_video': False,
             'sort_by': 'popularity.desc'
         }
+        self.fetch_data()
+        self.fetch_genres_data()
 
     def fetch_data(self):
         all_data = []
@@ -46,14 +49,30 @@ class MovieDataGrabber:
             else:
                 print(f"Error fetching data from page {page_num}")
 
-        return all_data
+        self.data = all_data
+
+    def fetch_genres_data(self):
+        try:
+            response = requests.get("https://api.themoviedb.org/3/genre/movie/list?language=en", headers=self.headers)
+            response.raise_for_status()  # Raise an exception for bad responses (e.g., 404, 500)
+
+            genres_data = response.json()
+            genres_data.get('genres', [])
+            self.genres_data = genres_data
+            # return genres_data.get('genres', [])
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching genres data: {e}")
+            # return []
 
     def get_all_data(self):
-        return self.fetch_data()
+        return self.data
+
+    def get_genres_data(self):
+        return self.genres_data
 
     def get_data_by_indexes(self, start_index, end_index, step):
-        all_data = self.fetch_data()
-        return all_data[start_index:end_index:step]
+        return self.data[start_index:end_index:step]
 
     # def get_most_popular_title(self):  #для одного популярного фильма
     #     all_data = self.fetch_data()
@@ -62,7 +81,7 @@ class MovieDataGrabber:
     #         return most_popular_movie.get('title', '')
     #     return ""
     def get_most_popular_title(self, count):  # для нескольких популярных фильмов
-        all_data = self.fetch_data()
+        all_data = self.data.copy()
         if all_data:
 
             popular_titles = []
@@ -77,20 +96,40 @@ class MovieDataGrabber:
         return 'Empty data list'
 
     def get_titles_by_description_key_words(self, keywords):
-        all_data = self.fetch_data()
-        if all_data and keywords:
+        if self.data and keywords:
             keywords = keywords.split()
 
             def has_keyword(movie):
                 return any(keyword.lower() in movie.get('overview', '').lower() for keyword in keywords)
 
-            titles_with_keywords = filter(has_keyword, all_data)
+            titles_with_keywords = filter(has_keyword, self.data)
 
             titles = [movie.get('title', '') for movie in titles_with_keywords]
 
             return titles
 
-        return 'Error: Either all_data or keywords (or both) are empty.'
+        # return 'Error: Either all_data or keywords (or both) are empty.'
+        return ''
+
+    def get_unique_genres(self):
+        unique_genres = [genre['name'] for genre in self.genres_data['genres']]
+        return unique_genres
+
+    def get_genre_id_by_name(self, genre_name):
+        for genre in self.genres_data.get('genres', []):
+            if genre['name'] == genre_name:
+                return genre['id']
+        return None
+
+    def delete_movie_by_genre(self, genre):
+        # genre_ids = self.data.get('genre_ids', [])
+        genre_id = self.get_genre_id_by_name(genre)
+        genre_ids_to_delete = set()
+        for movie in self.data:
+            if genre_id in movie.get('genre_ids', []):
+                genre_ids_to_delete.add(movie['id'])
+
+        self.data = [movie for movie in self.data if movie['id'] not in genre_ids_to_delete]
 
 
 def main():
@@ -102,6 +141,10 @@ def main():
     print("Data from desired pages:")
     print(data_from_pages)
 
+    genres_data = movie_grabber.get_genres_data()
+    print("Genres data:")
+    print(genres_data)
+
     data_by_indexes = movie_grabber.get_data_by_indexes(3, 19, 4)
     print("\nData with indexes from 3 to 19 with step 4:")
     print(data_by_indexes)
@@ -111,8 +154,8 @@ def main():
     for i in most_popular_title:
         print(i)
 
-    description = 'tennis'  #no matches found
-    description = 'human barbie'  #['Barbie', 'Transformers: Rise of the Beasts', 'The Little Mermaid' ...]
+    description = 'tennis'  # no matches found
+    description = 'barbie human'  # ['Barbie', 'Transformers: Rise of the Beasts', 'The Little Mermaid' ...]
     # description = ['human', 'barbie', 'tennis']
 
     titles_by_description_key_words = movie_grabber.get_titles_by_description_key_words(description)
@@ -125,5 +168,17 @@ def main():
     else:
         print(f'\nBy description "{description}" no matches found :( ')
 
+    unique_present_genres = movie_grabber.get_unique_genres()
+    print(f'\nSet of unique genres": ')
+    for i in unique_present_genres:
+        print(i)
 
-main()
+    movie_grabber.delete_movie_by_genre('Action')
+
+    data_from_pages = movie_grabber.get_all_data()
+    print('Movies data after removing genre "Action": ')
+    print(data_from_pages)
+
+
+if __name__ == '__main__':
+    main()
