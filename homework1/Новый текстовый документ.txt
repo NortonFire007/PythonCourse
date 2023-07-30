@@ -1,0 +1,41 @@
+def sum_diagonal_parallel(matrix):
+    diagonal_sum = []
+    # diagonal_sum_ = []
+
+    diagonal_sum_ = [sum([matrix[(4 - k if k < 4 else 0) + d][(0 if k < 4 else 4 - (k % 4)) + d] for d in range(k % 4)])
+                     for k in range(1, 8) if k != 4]
+
+    # for k in range(1, 8):
+    #     sum_ = []
+    #     if k != 4:
+    #         i = 4 - k if k < 4 else 0
+    #         j = 0 if k < 4 else 4 - (k % 4)
+    #         for d in range(0, (k % 4)):
+    #             sum_.append(matrix[i + d][j + d])
+    #         diagonal_sum_.append(sum(sum_))
+
+    # for k in range(1, 4):
+    #     sum_ = [0, 0]
+    #     i = (4 - k) % 4
+    #     for j in range(0, k):
+    #         sum_ = [z + y for z, y in zip(sum_, [matrix[i + j][j], matrix[j][i + j]])]
+    #     diagonal_sum_.extend(sum_)
+
+    for j in range(1, rows):
+
+        value = 0
+        k = 0
+        while j + k < columns and k < rows:
+            value += matrix[k][j + k]
+            k += 1
+        diagonal_sum.append(value)
+
+    for i in range(1, rows):
+        value = k = 0
+        while i + k < rows and k < columns:
+            value += matrix[i + k][k]
+            # print("\n value: ", value)
+            k += 1
+        diagonal_sum.append(value)
+
+    return diagonal_sum_  # diagonal_sum,
