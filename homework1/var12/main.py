@@ -2,6 +2,7 @@
 # Уплотнить заданную матрицу, удаляя из нее строки и столбцы, заполненные нулями. Найти номер
 # первой из строк, содержащих хотя бы один положительный элемент.
 import random
+from utils import get_rows_and_columns
 
 
 def create_random_matrix(num_rows, num_columns):
@@ -12,13 +13,7 @@ def create_random_matrix(num_rows, num_columns):
     return matrix
 
 
-while True:
-    try:
-        rows = int(input('Enter the number of rows: '))
-        columns = int(input('Enter the number of columns: '))
-        break
-    except ValueError:
-        print('Please enter a valid integer number.')
+rows, columns = get_rows_and_columns()
 
 matrix1 = create_random_matrix(rows, columns)
 
@@ -46,46 +41,19 @@ def remove_rows_and_columns(matrix, value):
     return new_matrix
 
 
-# test_matrix = [[-11, 91, 56, -8, 7],
-#                [-43, 0, 4, 158, 4],
-#                [-17, 139, -39, 57, 66],
-#                [0, -4, 0, 4, 101],
-#                [9, 28, 7, 18, -10]]
-
 matrix1 = remove_rows_and_columns(matrix1, 0)
 
 print('Matrix:')
 for sublist in matrix1:
     print(sublist)
-print("")
+print('\n')
 
 
 def find_positive_number(matrix):
     for i, val in enumerate(matrix, start=1):
         if any(num > 0 for num in val):
-            return f"Num: {i}"
-    return "There are no positive numbers in the matrix"
+            return f'Num: {i}'
+    return 'There are no positive numbers in the matrix'
 
 
 print(find_positive_number(matrix1))
-
-# def delete_rows_or_columns_with_value_zero(matrix):
-#     list_of_row_index_to_delete = []
-#     new_matrix = []
-#
-#     for i in range(rows):
-#         if all(matrix[i][j] != 0 for j in range(columns)):
-#             list_of_row_index_to_delete.append(j)
-#             new_matrix.append(matrix[i])
-#
-#
-#     # new_matrix = [row for row in matrix if not any(element == 0 for element in row)]
-#     # return new_matrix
-#     # for i in range(rows - k):
-#     #     for j in range(columns - k):
-#     #         if matrix[i][j] == 0:
-#     #             del matrix[i]
-#     #     list_of_row_index_to_delete.append(j)
-#     #     k += 1
-#     # list_of_row_index_to_delete.append(element)
-#     return new_matrix
