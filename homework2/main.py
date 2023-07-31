@@ -240,7 +240,6 @@ def main():
         print(i)
 
     path = 'films.csv'
-    # print(type(collections_with_structure))
     print(f'\nTask 12: Write information to a csv file by path {path}')
     movie_grabber.write_to_csv(collections_with_structure, path)
 
