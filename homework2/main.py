@@ -1,5 +1,8 @@
 import requests
 from collections import Counter
+from datetime import datetime, timedelta
+import csv
+import copy
 
 
 class MovieDataGrabber:
@@ -131,32 +134,71 @@ class MovieDataGrabber:
 
         return most_common_genre_names
 
-    def make_copy(self, data):
-        return data.copy()
+    @staticmethod
+    def make_copy(data):
+        return copy.deepcopy(data)
 
     def get_initial_and_copy_data(self):
         copied_data = self.make_copy(self.data)
         return self.data, [
             {**movie, 'genre_ids': [22, *movie['genre_ids'][1:]]}
-            if 'genre_ids' in movie and isinstance(movie['genre_ids'], list) and movie['genre_ids']
+            if 'genre_ids' in movie and movie['genre_ids']
             else movie
             for movie in copied_data
         ]
+
+    @staticmethod
+    def calculate_last_day_in_cinema(date):
+        date = datetime.strptime(date, "%Y-%m-%d")
+        last_day = date + timedelta(weeks=10)
+        return last_day.strftime("%Y-%m-%d")
+
+    def make_collections_with_structure(self):
+        collections_with_structure = []
+        sorted_data = []
+
+        for movie in self.data:
+            title = movie.get('title', '')
+            popularity = round(movie.get('popularity', 0), 1)
+            score = int(movie.get('vote_average', 0))
+            release_date = movie.get('release_date', '')
+            last_day_in_cinema = self.calculate_last_day_in_cinema(release_date)
+
+            collections_with_structure.append({
+                'title': title,
+                'popularity': popularity,
+                'score': score,
+                'last_day_in_cinema': last_day_in_cinema
+            })
+
+            sorted_data = sorted(collections_with_structure, key=lambda x: (x['popularity'], x['score']), reverse=True)
+        return sorted_data
+
+    @staticmethod
+    def write_to_csv(movie_data, file_path):
+        field_names = ['title', 'popularity', 'score', 'last_day_in_cinema']
+
+        with open(file_path, mode='w') as csv_file:
+            # writer = csv.DictWriter(csv_file, fieldnames=field_names)
+            writer = csv.writer(csv_file)
+            writer.writerow(field_names)
+            # writer.writeheader()
+            for movie in movie_data:
+                row_values = [movie[field] for field in field_names]
+                writer.writerow(row_values)
 
 
 def main():
     api_key = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTI3NGFmYTRlNTUyMjRjYzRlN2Q0NmNlMTNkOTZjOSIsInN1YiI6IjVkNmZhMWZmNzdjMDFmMDAxMDU5NzQ4OSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.lbpgyXlOXwrbY0mUmP-zQpNAMCw_h-oaudAJB6Cn5c8"
 
     print('Task 1: make movie_grabber\n')
-    movie_grabber = MovieDataGrabber(api_key, num_pages=1)
+    movie_grabber = MovieDataGrabber(api_key, num_pages=3)
 
     data_from_pages = movie_grabber.get_all_data()
     print(f'Task 2:\nData from desired pages: \n{data_from_pages}')
 
     genres_data = movie_grabber.get_genres_data()
     print(f'Genres data: \n {genres_data}')
-
-    all_data = movie_grabber.get_all_data()
 
     data_by_indexes = movie_grabber.get_data_by_indexes(3, 19, 4)
     print(f'\nTask 3:\nData with indexes from 3 to 19 with step 4:\n {data_by_indexes}')
@@ -166,14 +208,11 @@ def main():
     for i in most_popular_title:
         print(i)
 
-    # description = 'tennis'  # no matches found
-    description = 'barbie human'  # ['Barbie', 'Transformers: Rise of the Beasts', 'The Little Mermaid' ...]
-    # description = ['human', 'barbie', 'tennis']
+    description = 'barbie human'
 
     titles_by_description_key_words = movie_grabber.get_titles_by_description_key_words(description)
     if titles_by_description_key_words:
         print(f'\nTask 5:\nTitles by description "{description}": ')
-        # print(titles_by_description_key_words)
         for i in titles_by_description_key_words:
             print(i)
     else:
@@ -193,9 +232,17 @@ def main():
     most_popular_genres = movie_grabber.names_of_most_popular_genres(count=3)
     print(f'\nTask 8:\nMost popular genres:\n {most_popular_genres}')
 
-    initial_and_copy_data = movie_grabber.get_initial_and_copy_data()
-    print(f'\nTask 10:')
-    print(f'{movie_grabber.get_initial_and_copy_data()[0]}\n{movie_grabber.get_initial_and_copy_data()[1]}')
+    print(f'\nTask 10:{movie_grabber.get_initial_and_copy_data()[0]}\n{movie_grabber.get_initial_and_copy_data()[1]}')
+
+    print(f'\nTask 11:')
+    collections_with_structure = movie_grabber.make_collections_with_structure()
+    for i in collections_with_structure:
+        print(i)
+
+    path = 'films.csv'
+    # print(type(collections_with_structure))
+    print(f'\nTask 12: Write information to a csv file by path {path}')
+    movie_grabber.write_to_csv(collections_with_structure, path)
 
 
 if __name__ == '__main__':
