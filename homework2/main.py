@@ -4,17 +4,19 @@ from datetime import datetime, timedelta
 import csv
 import copy
 
+FIELD_NAMES = ['title', 'popularity', 'score', 'last_day_in_cinema']
+
 
 class MovieDataGrabber:
     def __init__(self, api_key, num_pages=1):
         self.api_key = api_key
         self.num_pages = num_pages
-        self.url = "https://api.themoviedb.org/3/discover/movie"
-        self.data = None
-        self.genres_data = None
+        self.url = 'https://api.themoviedb.org/3/discover/movie'
+        self.data = []
+        self.genres_data = []
         self.headers = {
-            "accept": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            'accept': 'application/json',
+            'Authorization': f'Bearer {self.api_key}'
         }
 
         self.params = {
@@ -32,25 +34,21 @@ class MovieDataGrabber:
             response = requests.get(self.url, params=self.params, headers=self.headers)
             if response.status_code == 200:
                 data = response.json()
-                all_data.extend(data.get('results', []))
+                self.data.extend(data.get('results', []))
             else:
-                print(f"Error fetching data from page {page_num}")
-
-        self.data = all_data
+                print(f'Error fetching data from page {page_num}')
 
     def fetch_genres_data(self):
         try:
-            response = requests.get("https://api.themoviedb.org/3/genre/movie/list?language=en", headers=self.headers)
-            response.raise_for_status()  # Raise an exception for bad responses (e.g., 404, 500)
+            response = requests.get(f'https://api.themoviedb.org/3/genre/movie/list?language=en', headers=self.headers)
+            response.raise_for_status()  # querry params
 
             genres_data = response.json()
             genres_data.get('genres', [])
             self.genres_data = genres_data
-            # return genres_data.get('genres', [])
 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching genres data: {e}")
-            # return []
 
     def get_all_data(self):
         return self.data
@@ -61,44 +59,18 @@ class MovieDataGrabber:
     def get_data_by_indexes(self, start_index, end_index, step):
         return self.data[start_index:end_index:step]
 
-    # def get_most_popular_title(self):  #для одного популярного фильма
-    #     all_data = self.fetch_data()
-    #     return max(all_data, key=lambda x: x['popularity']).get('title', '') if all_data else ""
-    def get_most_popular_title(self, count):  # для нескольких популярных фильмов
-        all_data = self.data.copy()
-        if all_data:
-            popular_titles = []
-
-            for i in range(count):
-                most_popular_movie = max(all_data, key=lambda x: x['popularity'])
-                popular_titles.append(most_popular_movie.get('title', ''))
-                all_data.remove(most_popular_movie)  # Удаляем найденный фильм из списка данных, чтобы не повторять его
-
-            return popular_titles
-
-        return 'Empty data list'
+    def get_most_popular_title(self):
+        return max(self.data, key=lambda x: x['popularity']).get('title', '')
 
     def get_titles_by_description_key_words(self, keywords):
-        if self.data and keywords:
-            keywords = keywords.lower().split()
-            return [movie.get('title', '') for movie in self.data if
-                    any(keyword in movie.get('overview', '').lower() for keyword in keywords)]
-            # keywords = keywords.split()
-            # def has_keyword(movie):
-            #     return any(keyword.lower() in movie.get('overview', '').lower() for keyword in keywords)
-            #
-            # titles_with_keywords = filter(has_keyword, self.data)
-            #
-            # titles = [movie.get('title', '') for movie in titles_with_keywords]
-            #
-            # return titles
-
-        return 'Not found'
+        keywords = keywords.lower().split()
+        return [movie.get('title', '') for movie in self.data if
+                any(keyword in movie.get('overview', '').lower() for keyword in keywords)]
 
     def get_unique_genres(self):
         return [genre['name'] for genre in self.genres_data['genres']]
 
-    def get_genre_id_by_name(self, genre_name):
+    def get_genre_id_by_name(self, genre_name):  # переписать под словарь id name
         for genre in self.genres_data.get('genres', []):
             if genre['name'] == genre_name:
                 return genre['id']
@@ -112,33 +84,23 @@ class MovieDataGrabber:
 
     def delete_movie_by_genre(self, genre):
         genre_id = self.get_genre_id_by_name(genre)
-        genre_ids_to_delete = {movie['id'] for movie in self.data if genre_id in movie.get('genre_ids', [])}
-        self.data = [movie for movie in self.data if movie['id'] not in genre_ids_to_delete]
-        # genre_id = self.get_genre_id_by_name(genre)
-        # genre_ids_to_delete = set()
-        # for movie in self.data:
-        #     if genre_id in movie.get('genre_ids', []):
-        #         genre_ids_to_delete.add(movie['id'])
-        #
+        # genre_ids_to_delete = {movie['id'] for movie in self.data if genre_id in movie.get('genre_ids', [])}
         # self.data = [movie for movie in self.data if movie['id'] not in genre_ids_to_delete]
+        return [movie for movie in self.data if genre_id not in movie.get('genre_ids', [])]
 
     def names_of_most_popular_genres(self, count=1):
         all_genre_ids = [genre_id for movie in self.data for genre_id in movie.get('genre_ids', [])]
 
-        genre_id_counts = Counter(all_genre_ids)
-
-        most_common_genre_ids = genre_id_counts.most_common(count)
+        most_common_genre_ids = Counter(all_genre_ids).most_common(count)
 
         most_common_genre_names = [genre['name'] for genre_id, _ in most_common_genre_ids
                                    for genre in self.genres_data['genres'] if genre['id'] == genre_id]
-
         return most_common_genre_names
 
     @staticmethod
     def create_pairs_with_each_element(movie_titles):
-        pairs = [(movie_titles[i], movie_titles[j]) for i in range(len(movie_titles)) for j in
-                 range(i + 1, len(movie_titles))]
-        return pairs
+        return [(val, val2) for i, val in enumerate(movie_titles)
+                for val2 in movie_titles[i + 1:]]
 
     def group_titles_in_pairs_by_common_genres(self, genre):
         genre_id = self.get_genre_id_by_name(genre)
@@ -146,14 +108,10 @@ class MovieDataGrabber:
         titles_list = [movie['title'] for movie in self.data if genre_id in movie.get('genre_ids', [])]
 
         pairs = self.create_pairs_with_each_element(titles_list)
-        return pairs
-
-    @staticmethod
-    def make_copy(data):
-        return copy.deepcopy(data)
+        return pairs  # переделать без вводного жанра
 
     def get_initial_and_copy_data(self):
-        copied_data = self.make_copy(self.data)
+        copied_data = copy.deepcopy(self.data)
         return self.data, [
             {**movie, 'genre_ids': [22, *movie['genre_ids'][1:]]}
             if 'genre_ids' in movie and movie['genre_ids']
@@ -169,7 +127,6 @@ class MovieDataGrabber:
 
     def make_collections_with_structure(self):
         collections_with_structure = []
-        sorted_data = []
 
         for movie in self.data:
             title = movie.get('title', '')
@@ -179,27 +136,23 @@ class MovieDataGrabber:
             last_day_in_cinema = self.calculate_last_day_in_cinema(release_date)
 
             collections_with_structure.append({
-                'title': title,
+                'title': movie.get('title', ''),
                 'popularity': popularity,
                 'score': score,
                 'last_day_in_cinema': last_day_in_cinema
             })
 
-            sorted_data = sorted(collections_with_structure, key=lambda x: (x['popularity'], x['score']), reverse=True)
-        return sorted_data
+        return sorted(collections_with_structure, key=lambda x: (x['popularity'], x['score']), reverse=True)
 
     @staticmethod
     def write_to_csv(movie_data, file_path):
-        field_names = ['title', 'popularity', 'score', 'last_day_in_cinema']
-
         with open(file_path, mode='w') as csv_file:
-            # writer = csv.DictWriter(csv_file, fieldnames=field_names)
-            writer = csv.writer(csv_file)
-            writer.writerow(field_names)
-            # writer.writeheader()
-            for movie in movie_data:
-                row_values = [movie[field] for field in field_names]
-                writer.writerow(row_values)
+            writer = csv.DictWriter(csv_file)
+            writer.writerow(FIELD_NAMES)
+            writer.writerows(movie_data)
+            # for movie in movie_data:
+            #     row_values = [movie[field] for field in FIELD_NAMES]
+            #     writer.writerow(row_values)
 
 
 def main():
@@ -217,10 +170,8 @@ def main():
     data_by_indexes = movie_grabber.get_data_by_indexes(3, 19, 4)
     print(f'\nTask 3:\nData with indexes from 3 to 19 with step 4:\n {data_by_indexes}')
 
-    most_popular_title = movie_grabber.get_most_popular_title(3)
-    print('\nTask 4:\nMost popular 3 titles:')
-    for i in most_popular_title:
-        print(i)
+    most_popular_title = movie_grabber.get_most_popular_title()
+    print(f'\nTask 4:\nMost popular  title: {most_popular_title}')
 
     description = 'barbie human'
 
