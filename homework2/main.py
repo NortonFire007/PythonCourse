@@ -136,27 +136,16 @@ class MovieDataGrabber:
 
     @staticmethod
     def create_pairs_with_each_element(movie_titles):
-        pairs = []
-
-        for i in range(len(movie_titles)):
-            for j in range(i + 1, len(movie_titles)):
-                pair = (movie_titles[i], movie_titles[j])
-                pairs.append(pair)
-
+        pairs = [(movie_titles[i], movie_titles[j]) for i in range(len(movie_titles)) for j in
+                 range(i + 1, len(movie_titles))]
         return pairs
 
     def group_titles_in_pairs_by_common_genres(self, genre):
         genre_id = self.get_genre_id_by_name(genre)
-        titles_list = []
 
-        for movie in self.data:
-            for gen in movie['genre_ids']:
-                print(f'\n gen {gen} {genre_id}')
-                if gen == genre_id:
-                    titles_list.append(movie['title'])
+        titles_list = [movie['title'] for movie in self.data if genre_id in movie.get('genre_ids', [])]
 
         pairs = self.create_pairs_with_each_element(titles_list)
-
         return pairs
 
     @staticmethod
@@ -260,7 +249,7 @@ def main():
     titles_in_pairs = movie_grabber.group_titles_in_pairs_by_common_genres('Comedy')
     print(f'\nTask 9:\nCollection of film titles grouped in pairs by common genres:\n {titles_in_pairs}')
 
-    print(f'\nTask 10:{movie_grabber.get_initial_and_copy_data()[0]}\n{movie_grabber.get_initial_and_copy_data()[1]}')
+    print(f'\nTask 10:\n{movie_grabber.get_initial_and_copy_data()[0]}\n{movie_grabber.get_initial_and_copy_data()[1]}')
 
     print(f'\nTask 11:')
     collections_with_structure = movie_grabber.make_collections_with_structure()
