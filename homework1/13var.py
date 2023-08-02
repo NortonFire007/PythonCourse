@@ -41,9 +41,7 @@ def cyclic_shift_right(my_list, num_to_shift):
 
 if direction == 'down':
     matrix1 = cyclic_shift_down(matrix1, n)
-elif direction == 'right':
-    matrix1 = cyclic_shift_right(matrix1, n)
 else:
-    print('\nError!')
+    matrix1 = cyclic_shift_right(matrix1, n)
 
 print_matrix(matrix1)
