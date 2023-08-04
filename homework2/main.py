@@ -5,7 +5,7 @@ import csv
 import copy
 
 FIELD_NAMES = ['title', 'popularity', 'score', 'last_day_in_cinema']
-API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTI3NGFmYTRlNTUyMjRjYzRlN2Q0NmNlMTNkOTZjOSIsInN1YiI6IjVkNmZhMWZmNzdjMDFmMDAxMDU5NzQ4OSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.lbpgyXlOXwrbY0mUmP-zQpNAMCw_h-oaudAJB6Cn5c8"
+API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTI3NGFmYTRlNTUyMjRjYzRlN2Q0NmNlMTNkOTZjOSIsInN1YiI6IjVkNmZhMWZmNzdjMDFmMDAxMDU5NzQ4OSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.lbpgyXlOXwrbY0mUmP-zQpNAMCw_h-oaudAJB6Cn5c8'
 
 
 class MovieDataGrabber:
@@ -14,7 +14,7 @@ class MovieDataGrabber:
         self.num_pages = num_pages
         self.url = 'https://api.themoviedb.org/3/'
         self.data = []
-        self.genres_data = []
+        self.genres_data = None
         self.headers = {
             'accept': 'application/json',
             'Authorization': f'Bearer {self.api_key}'
@@ -44,11 +44,10 @@ class MovieDataGrabber:
             response.raise_for_status()
 
             genres_data = response.json()
-            genres_data.get('genres', [])
             self.genres_data = genres_data.get('genres', [])
 
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching genres data: {e}")
+            print(f'Error fetching genres data: {e}')
 
     def get_all_data(self):
         return self.data
@@ -63,12 +62,11 @@ class MovieDataGrabber:
         return max(self.data, key=lambda x: x['popularity']).get('title', '')
 
     def get_titles_by_description_key_words(self, keywords):
-        keywords = keywords.lower().split()
         return [movie.get('title', '') for movie in self.data if
-                any(keyword in movie.get('overview', '').lower() for keyword in keywords)]
+                any(keyword in movie.get('overview', '').lower() for keyword in keywords.lower().split())]
 
     def get_unique_genres(self):
-        return [genre['name'] for genre in self.genres_data]
+        return (genre['name'] for genre in self.genres_data)
 
     def delete_movie_by_genre(self, genre):
         genre_id = next((item['id'] for item in self.genres_data if item['name'] == genre), None)
@@ -81,14 +79,11 @@ class MovieDataGrabber:
                 id_val, score_val
                 in most_common_genre_ids]
 
-    # @staticmethod
     def group_titles_in_pairs_by_common_genres(self):
-        pairs = []
-        for i, movie1 in enumerate(self.data):
-            for movie2 in self.data[i + 1:]:
-                if any(genre in movie2['genre_ids'] for genre in movie1['genre_ids']):
-                    pairs.append((movie1['title'], movie2['title']))
-        return pairs
+        return [(movie1['title'], movie2['title'])
+                for i, movie1 in enumerate(self.data)
+                for movie2 in self.data[i + 1:]
+                if any(genre in movie2['genre_ids'] for genre in movie1['genre_ids'])]
 
     def get_initial_and_copy_data(self):
         copied_data = copy.deepcopy(self.data)
@@ -101,9 +96,7 @@ class MovieDataGrabber:
 
     @staticmethod
     def calculate_last_day_in_cinema(date):
-        date = datetime.strptime(date, "%Y-%m-%d")
-        last_day = date + timedelta(weeks=10)
-        return last_day.strftime("%Y-%m-%d")
+        return (datetime.strptime(date, "%Y-%m-%d") + timedelta(weeks=10)).strftime("%Y-%m-%d")
 
     def make_collections_with_structure(self):
         collections_with_structure = []
