@@ -22,7 +22,7 @@ directions_words = ('down', 'right')
 direction = get_valid_word(directions_words)
 print("Direction:", direction)
 
-n = get_int('n')
+n = get_int('shifting n: ')
 
 matrix1 = generate_random_matrix(ROWS, COLUMNS)
 
@@ -39,9 +39,6 @@ def cyclic_shift_right(my_list, num_to_shift):
     return [cyclic_shift_down(sublist, num_to_shift) for sublist in my_list]
 
 
-if direction == 'down':
-    matrix1 = cyclic_shift_down(matrix1, n)
-else:
-    matrix1 = cyclic_shift_right(matrix1, n)
+matrix1 = cyclic_shift_down(matrix1, n) if direction == 'down' else cyclic_shift_right(matrix1, n)
 
 print_matrix(matrix1)

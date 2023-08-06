@@ -6,7 +6,7 @@ def get_int(var):
         try:
             return int(input(f'Enter integer number of {var}: '))
         except ValueError:
-            print("Invalid value!")
+            print('Invalid value!')
 
 
 def generate_random_matrix(num_rows, num_columns, min_value=-50, max_value=200):

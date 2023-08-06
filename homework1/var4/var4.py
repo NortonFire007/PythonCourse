@@ -11,11 +11,20 @@ def multiply_list_numbers(my_list):
 
 
 def sum_diagonal_parallel(matrix, size):
-    diagonal_sum_ = [sum([matrix[(size - k if k < size else 0) + d][
-                              (0 if k < size else size - (k % size)) + d] for d in
-                          range(k % size)])
-                     for k in range(1, size * 2) if k != size]
-    return diagonal_sum_
+    return [sum([matrix[(size - k if k < size else 0) + d][
+                     (0 if k < size else size - (k % size)) + d] for d in
+                 range(k % size)])
+            for k in range(1, size * 2) if k != size]
+
+
+def find_positive_row(mass):
+    for sublist in mass:
+        print(sublist)
+        if any(num < 0 for num in sublist):
+            print('Contains of negative numbers in this row.')
+        else:
+            product = multiply_list_numbers(sublist)
+            print('Product of positive numbers in sublist:', product)
 
 
 def main():
@@ -25,13 +34,7 @@ def main():
 
     print_matrix(random_matrix)
 
-    for sublist in random_matrix:
-        print(sublist)
-        if any(num < 0 for num in sublist):
-            print('Contains of negative numbers in this row.')
-        else:
-            product = multiply_list_numbers(sublist)
-            print('Product of positive numbers in sublist:', product)
+    find_positive_row(random_matrix)
 
     diagonal_sum_answer = sum_diagonal_parallel(random_matrix, size)
     print(*diagonal_sum_answer, sep='\n')
