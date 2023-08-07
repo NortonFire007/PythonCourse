@@ -25,29 +25,35 @@ def setup_logger(log_level=logging.DEBUG):
     logging.basicConfig(
         filename='my_log_file.log',
         level=log_level,
-        format='%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S'
+        format='%(asctime)s - %(levelname)s - %(message)s"'
+        # format='%(asctime)s:%(levelname)s:%(name)s:%(message)s')
     )
     return logging.getLogger('my_logger')
 
 
-def download_user_accounts_csv(url, output_csv, my_logger):
+# def download_user_accounts_csv(url, output_csv, my_logger):
+#     my_logger.info('Downloading user accounts data from the API...')
+#     response = requests.get(url)
+#     if response.status_code == 200:
+#         data = response.text
+#         if data:
+#             my_logger.info(f'Received {len(data)} user accounts from the API.')
+#             with open(output_csv, 'w', newline='') as file:
+#                 file.write(data)
+#             my_logger.info('Successfully downloaded user accounts to user_accounts.csv')
+#         else:
+#             my_logger.warning('No data received from the API.')
+#     else:
+#         my_logger.error(f'Failed to fetch data. Status code: {response.status_code}')
+def download_user_accounts_csv(output_csv, my_logger):
     my_logger.info('Downloading user accounts data from the API...')
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.text
-        if data:
-            my_logger.info(f'Received {len(data)} user accounts from the API.')
-            with open(output_csv, 'w', newline='') as file:
-                file.write(data)
-            my_logger.info('Successfully downloaded user accounts to user_accounts.csv')
-        else:
-            my_logger.warning('No data received from the API.')
-    else:
-        my_logger.error(f'Failed to fetch data. Status code: {response.status_code}')
+    with open(output_csv, 'w', newline='', encoding='utf-8') as file:
+        file.write((requests.get(URL)).text)
+    my_logger.info('Successfully downloaded user accounts to user_accounts.csv')
 
 
 def read_data_from_csv():  # file_path
-    with open('user_accounts.csv', 'r', newline='') as csvfile:
+    with open('user_accounts_csv.csv', 'r', newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
         data = [row for row in reader]
     return data
@@ -90,11 +96,16 @@ def filter_data(data1, my_logger, gender=None, num_rows=None):
     return filtered_data
 
 
+def change_content(field, data):  # name.title
+    rule_list = [{'Mrs': 'missis'}, {'Ms ': 'miss'}, {'Mr': 'mister'}, {'Madame': 'mademoiselle'}]
+
+
+
 def main(output_folder, output_filename, log_lev, gender=None, num_rows=None):
     # print("Current working directory:", os.getcwd()) E:\Programming\pythonProj\pythonProject\PythonCourse\Homework3
     my_logger = setup_logger(log_lev)
 
-    download_user_accounts_csv(URL, 'user_accounts_csv', my_logger)
+    download_user_accounts_csv('user_accounts_csv.csv', my_logger)
     print(f"Destination folder: {output_folder}")
     print(f"Filename: {output_filename}")
     print(f"Gender filter: {gender}")
