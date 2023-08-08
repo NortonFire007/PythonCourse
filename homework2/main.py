@@ -69,15 +69,15 @@ class MovieDataGrabber:
         return (genre['name'] for genre in self.genres_data)
 
     def delete_movie_by_genre(self, genre):
-        genre_id = next((item['id'] for item in self.genres_data if item['name'] == genre), None)
+        # genre_id = (item['id'] for item in self.genres_data if item['name'] == genre)[0]
+        genre_id = [item['id'] for item in self.genres_data if item['name'] == genre].pop()
         self.data = [movie for movie in self.data if genre_id not in movie.get('genre_ids', [])]
 
     def names_of_most_popular_genres(self, count=1):
         all_genre_ids = [genre_id for movie in self.data for genre_id in movie.get('genre_ids', [])]
         most_common_genre_ids = Counter(all_genre_ids).most_common(count)
-        return [(next(item['name'] for item in self.genres_data if item['id'] == id_val), score_val) for
-                id_val, score_val
-                in most_common_genre_ids]
+        return [(next(item['name'] for item in self.genres_data if item['id'] == id_val), score_val)
+                for id_val, score_val in most_common_genre_ids]
 
     def group_titles_in_pairs_by_common_genres(self):
         return [(movie1['title'], movie2['title'])
@@ -86,29 +86,22 @@ class MovieDataGrabber:
                 if any(genre in movie2['genre_ids'] for genre in movie1['genre_ids'])]
 
     def get_initial_and_copy_data(self):
-        copied_data = copy.deepcopy(self.data)
-        return self.data, [
-            {**movie, 'genre_ids': [22, *movie['genre_ids'][1:]]}
-            if 'genre_ids' in movie and movie['genre_ids']
-            else movie
-            for movie in copied_data
-        ]
+        return self.data, [{**movie, 'genre_ids': [22, *movie['genre_ids'][1:]]} for movie in self.data]
 
     @staticmethod
     def calculate_last_day_in_cinema(date):
         return (datetime.strptime(date, "%Y-%m-%d") + timedelta(weeks=10)).strftime("%Y-%m-%d")
 
-    def make_collections_with_structure(self):
-        collections_with_structure = []
+    def x(self, movie):
+        return {
+            'title': movie.get('title', ''),
+            'popularity': round(movie.get('popularity', 0), 1),
+            'score': int(movie.get('vote_average', 0)),
+            'last_day_in_cinema': self.calculate_last_day_in_cinema(movie.get('release_date', ''))
+        }
 
-        for movie in self.data:
-            collections_with_structure.append({
-                'title': movie.get('title', ''),
-                'popularity': round(movie.get('popularity', 0), 1),
-                'score': int(movie.get('vote_average', 0)),
-                'last_day_in_cinema': self.calculate_last_day_in_cinema(movie.get('release_date', ''))
-            })
-        return sorted(collections_with_structure, key=lambda x: (x['popularity'], x['score']), reverse=True)
+    def make_collections_with_structure(self):
+        return sorted(map(self.x, self.data), key=lambda x: (x['popularity'], x['score']), reverse=True)
 
     @staticmethod
     def write_to_csv(movie_data, file_path):
