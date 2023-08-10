@@ -150,7 +150,7 @@ def create_subfolders(destination_folder, data):
             country_folder = os.path.join(decade_folder, country)
             os.makedirs(country_folder, exist_ok=True)
             max_age = max([data['dob.age'] for data in country_data])
-            avg_registered = mean([int(data['registered.age']) for data in country_data])  # mean - avg
+            avg_registered = round(mean([int(data['registered.age']) for data in country_data]), 1)  # mean - avg
             most_common_id = Counter(([data['id.name'] for data in country_data])).most_common(1)[0][0]
             filename = os.path.join(country_folder, f'{max_age}_{avg_registered}_{most_common_id}.csv')
             my_logger.info(f'Log paths {filename} was created.')
