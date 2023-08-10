@@ -217,7 +217,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_folder', type=str,
                         help='Path to the destination folder where output file will be placed.')
     parser.add_argument('--output_filename', default='output.csv', type=str, help='Output filename (default: output)')
-    # parser.add_mutually_exclusive_group()  ??? should i use it here? for --gender and --num_rows
+    # parser.add_mutually_exclusive_group()  ? should i use it here? for --gender and --num_rows
     parser.add_argument('--gender', choices=['male', 'female'], type=str,
                         help='Filter data by gender (male or female).')
     parser.add_argument('--num_rows', type=int, help='Filter data by number of rows.')
