@@ -9,6 +9,7 @@ from statistics import mean
 from collections import Counter
 
 URL = 'https://randomuser.me/api/?results=5000&format=csv'
+RULE_LIST = {'Mrs': 'missis', 'Ms ': 'miss', 'Mr': 'mister', 'Madame': 'mademoiselle'}
 
 
 def setup_logger():
@@ -46,68 +47,61 @@ def read_data_from_csv():
 
 def write_data_in_csv(file_path, input_data):
     with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = list(input_data[0].keys())
+        fieldnames = input_data[0].keys()
+        print('fieldnames', fieldnames, '\n')
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(input_data)
         my_logger.info(f'Data was written in {file_path}.')
 
 
-def add_index_field(input_data):
-    for index, data in enumerate(input_data, start=1):
-        data['global_index'] = index
+def add_index_field(i, input_data):
+    input_data['global_index'] = i
     return input_data
 
 
 def add_timezone_offset(datetime_str, offset_str):
     hours, minutes = map(int, offset_str.split(':'))
-    offset = timedelta(hours=hours, minutes=minutes)
-
-    dt_with_offset = datetime_str + offset
+    dt_with_offset = datetime_str + timedelta(hours=hours, minutes=minutes)
     return dt_with_offset.strftime('%Y-%m-%d %H:%M:%S')
 
 
 def add_current_time(input_data):
-    for data in input_data:
-        timezone_offset = data['location.timezone.offset']
-        current_time = datetime.now()
-        data['current_time'] = add_timezone_offset(current_time, timezone_offset)
+    timezone_offset = input_data['location.timezone.offset']
+    current_time = datetime.now()
+    input_data['current_time'] = add_timezone_offset(current_time, timezone_offset)
     my_logger.info(f'Add current time field')
     return input_data
 
 
 def change_name_content(input_data):
-    rule_list = {'Mrs': 'missis', 'Ms ': 'miss', 'Mr': 'mister', 'Madame': 'mademoiselle'}
     my_logger.info('The content was changed in the field "name.title"')
-    return [{'name.title': rule_list.get(data['name.title'], data['name.title']), **data} for data in input_data]
+    return {'name.title': RULE_LIST.get(input_data['name.title'], input_data['name.title']), **input_data}
 
 
 def convert_to_format(input_data, field='dob.date', format_string='%Y-%m-%d'):
-    for data in input_data:
-        dob = datetime.strptime(data[field], '%Y-%m-%dT%H:%M:%S.%fZ')
-        data[field] = dob.strftime(format_string)
+    dob = datetime.strptime(input_data[field], '%Y-%m-%dT%H:%M:%S.%fZ')
+    input_data[field] = dob.strftime(format_string)
     my_logger.info(f'Format of field {field} was changed to {format_string}')
     return input_data
 
 
 def filter_data(input_data, gender=None, num_rows=None):
     if gender:
-        filtered_data = [user for user in input_data if user['gender'] == gender]
+        input_data = [user for user in input_data if user['gender'] == gender]
         # input_data = list(filter(lambda x: x['gender'] == gender, input_data))
         my_logger.info('The data was filtered by gender')
     elif num_rows and num_rows < len(input_data):
-        filtered_data = input_data[:num_rows]
+        input_data = input_data[:num_rows]
         my_logger.info('The data was filtered by num_rows')
     else:
         my_logger.warning('The data was not filtered by any of the parameters!!!')
-        return input_data
-    return filtered_data
+    return input_data
 
 
 def check_folder_existence(path):
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
-        my_logger.info(f'The folder was created along the path {path} ')
+    os.makedirs(path, exist_ok=True)
+    my_logger.info(f'The folder was created along the path {path} ')
     os.chdir(path)
 
 
@@ -130,17 +124,16 @@ def rearrange_data(input_data):
 
 def create_subfolders(destination_folder, data):
     for decade, countries in data.items():
-        decade_folder = os.path.join(destination_folder, decade)
-        os.makedirs(decade_folder, exist_ok=True)
-
         for country, country_data in countries.items():
-            country_folder = os.path.join(decade_folder, country)
+            country_folder = os.path.join(destination_folder, decade, country)
             os.makedirs(country_folder, exist_ok=True)
+
             max_age = max([data['dob.age'] for data in country_data])
             avg_registered = round(mean([int(data['registered.age']) for data in country_data]), 1)
             most_common_id = Counter(([data['id.name'] for data in country_data])).most_common(1)[0][0]
             filename = os.path.join(country_folder, f'{max_age}_{avg_registered}_{most_common_id}.csv')
-            my_logger.info(f'Log paths {filename} was created.')
+            my_logger.info(f'Log paths {filename} was created.')  # вынести функц
+
             write_data_in_csv(filename, country_data)
 
 
@@ -152,10 +145,13 @@ def remove_data_before_certain_decade(folder_path, decade):
 
 def log_full_folder_structure(folder_path, level=0):
     contents = os.listdir(folder_path)
-    [my_logger.info('\t' * level + f'[F] {item}') if os.path.isfile(os.path.join(folder_path, item))
-     else (my_logger.info('\t' * level + f'[D] {item}'),
-           log_full_folder_structure(os.path.join(folder_path, item), level + 1))
-     for item in contents]
+
+    for item in contents:
+        item_type = 'F' if os.path.isfile(os.path.join(folder_path, item)) else 'D'
+        my_logger.info('\t' * level + f'[{item_type}] {item}')
+
+        if item_type != 'F':
+            log_full_folder_structure(os.path.join(folder_path, item), level + 1)
 
 
 def create_zip_archive(output_zip_file, folder_path):
@@ -166,13 +162,16 @@ def create_zip_archive(output_zip_file, folder_path):
 
 def preprocess_data(data, gender, num_rows):
     filtered_data = filter_data(data, gender, num_rows)
-    filtered_data = add_index_field(filtered_data)
-    filtered_data = add_current_time(filtered_data)
-    filtered_data = change_name_content(filtered_data)
-    filtered_data = convert_to_format(filtered_data, 'dob.date', '%m-%d-%Y')
-    filtered_data = convert_to_format(filtered_data, 'registered.date', '%m-%d-%Y, %H:%M:%S')
+    data = []
+    for i, value in enumerate(filtered_data):
+        value = add_index_field(i, value)
+        value = add_current_time(value)
+        value = change_name_content(value)
+        value = convert_to_format(value, 'dob.date', '%m-%d-%Y')
+        value = convert_to_format(value, 'registered.date', '%m-%d-%Y, %H:%M:%S')
+        data.append(value)
     my_logger.info('Data was filtered!')
-    return filtered_data
+    return data
 
 
 def create_parser():
@@ -180,10 +179,14 @@ def create_parser():
     parser.add_argument('--output_folder', type=str, required=True,
                         help='Path to the destination folder where output file will be placed.')
     parser.add_argument('--output_filename', default='output.csv', type=str, help='Output filename (default: output)')
-    parser.add_argument('--gender', choices=['male', 'female'], type=str,
-                        help='Filter data by gender (male or female).')
-    parser.add_argument('--num_rows', type=int, help='Filter data by number of rows.')
-    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO',
+
+    mutually_exclusive_group = parser.add_mutually_exclusive_group()
+    mutually_exclusive_group.add_argument('--gender', choices=['male', 'female'], type=str,
+                                          help='Filter data by gender (male or female).')
+    mutually_exclusive_group.add_argument('--num_rows', type=int,
+                                          help='Filter data by number of rows.')
+
+    parser.add_argument('log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO',
                         type=str, help='Log level (default: INFO).')
     return parser
 
