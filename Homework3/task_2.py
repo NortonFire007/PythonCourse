@@ -47,9 +47,7 @@ def read_data_from_csv():
 
 def write_data_in_csv(file_path, input_data):
     with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = input_data[0].keys()
-        print('fieldnames', fieldnames, '\n')
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer = csv.DictWriter(csvfile, fieldnames=input_data[0].keys())
         writer.writeheader()
         writer.writerows(input_data)
         my_logger.info(f'Data was written in {file_path}.')
@@ -122,24 +120,33 @@ def rearrange_data(input_data):
     return new_structure
 
 
+def create_filename(country_data, country_folder):
+    max_age = max([data['dob.age'] for data in country_data])
+    avg_registered = round(mean([int(data['registered.age']) for data in country_data]), 1)
+    most_common_id = Counter(([data['id.name'] for data in country_data])).most_common(1)[0][0]
+    filename = os.path.join(country_folder, f'{max_age}_{avg_registered}_{most_common_id}.csv')
+    return filename
+
+
 def create_subfolders(destination_folder, data):
     for decade, countries in data.items():
         for country, country_data in countries.items():
             country_folder = os.path.join(destination_folder, decade, country)
             os.makedirs(country_folder, exist_ok=True)
 
-            max_age = max([data['dob.age'] for data in country_data])
-            avg_registered = round(mean([int(data['registered.age']) for data in country_data]), 1)
-            most_common_id = Counter(([data['id.name'] for data in country_data])).most_common(1)[0][0]
-            filename = os.path.join(country_folder, f'{max_age}_{avg_registered}_{most_common_id}.csv')
-            my_logger.info(f'Log paths {filename} was created.')  # вынести функц
+            filename = create_filename(country_data, country_folder)
+            my_logger.info(f'Log paths {filename} was created.')
 
             write_data_in_csv(filename, country_data)
 
 
 def remove_data_before_certain_decade(folder_path, decade):
     contents = os.listdir(folder_path)
-    [shutil.rmtree(os.path.join(folder_path, f)) for f in contents if f[:2].isdigit() and int(f[:2]) < decade]
+    for f in contents:
+        if f[:2].isdigit() and int(f[:2]) < decade and int(f[:2]) != 0:
+            file_path = os.path.join(folder_path, f)
+            if os.path.isdir(file_path):
+                shutil.rmtree(file_path)
     my_logger.info(f'Data before {decade} decade was removed!')
 
 
