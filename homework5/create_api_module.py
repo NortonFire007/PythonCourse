@@ -6,13 +6,25 @@ from logger import setup_logger
 from db_decorator import db_connection_decorator
 import freecurrencyapi
 from datetime import datetime, timezone
-
-# from money_transfer import perform_money_transfer               cyclic import
+from validation import valid_full_name, validate_strict_account_fields
 
 API_KEY = 'fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
 URL = f'https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY}'
 
 my_logger = setup_logger()
+
+
+def prepare_rows(input_data):
+    """
+    Prepare rows for insertion into the database using executemany.
+    Parameters:
+        input_data: Account or Bank data to be added. Each element should be a dictionary representing a record.
+
+    Returns:
+        list: A list of tuples, where each tuple represents a row to be inserted into the database.
+    """
+    data = input_data[0] if isinstance(input_data[0], list) else input_data
+    return [tuple(row.values()) for row in data]
 
 
 @db_connection_decorator
@@ -29,9 +41,9 @@ def add_user(cursor, *input_data):
             None
         """
     data = input_data[0] if isinstance(input_data[0], list) else input_data
-    # rows = [(user[0].split()[0], user[0].split()[1], user[1], user[2]) for user in data]
-    rows = [(row['user_full_name'].split()[0], row['user_full_name'].split()[1], row['birth_day'],
-             row['accounts']) for row in data]
+    rows = [(name[0], name[1], row['birth_day'], row['accounts']) for row in data for name in
+            [valid_full_name(row['user_full_name'])]]
+
     cursor.executemany('INSERT INTO User (Name, Surname, Birth_day, Accounts) VALUES (?, ?, ?, ?)', rows)
     my_logger.info('Users added successfully')
 
@@ -39,13 +51,12 @@ def add_user(cursor, *input_data):
 @db_connection_decorator
 def add_bank(cursor, *input_data):
     """
-       Add bank information to the database.
-       Parameters:
-           cursor (sqlite3.Connection): The database connection.
-           input_data (list or dict): Bank data(id and name) to be added.
-       """
-    data = input_data[0] if isinstance(input_data[0], list) else input_data
-    rows = [tuple(row.values()) for row in data]
+    Add bank information to the database.
+    Parameters:
+        cursor (sqlite3.Connection): The database connection.
+        input_data (list or dict): Bank data (id and name) to be added.
+    """
+    rows = prepare_rows(input_data)
     cursor.executemany('INSERT INTO Bank (Name, Id) VALUES (?, ?)', rows)
     my_logger.info('Banks added successfully')
 
@@ -56,16 +67,18 @@ def add_account(cursor, input_data):
     Add account information to the database.
     Parameters:
         cursor (sqlite3.Connection): The database connection.
-        input_data: Account data to be added. Each element should be a dictionary representing an account,
-            containing keys 'User_id', 'Type', 'Account_Number', 'Bank_id', 'Currency', 'Amount', and 'Status'.
+        input_data: Account data to be added.
+
     Returns:
         None
     """
-    data = input_data[0] if isinstance(input_data[0], list) else input_data
-    rows = [tuple(row.values()) for row in data]
+
+    validate_strict_account_fields(input_data)
+
+    rows = prepare_rows(input_data)
     cursor.executemany('INSERT INTO Account (User_id, Type, Account_Number, Bank_id, Currency, Amount, Status) VALUES '
                        '(?, ?, ?, ?, ?, ?, ?)', rows)
-    my_logger.info('Accounts added to database successfully')
+    my_logger.info('Accounts added to the database successfully')
 
 
 @db_connection_decorator
@@ -224,7 +237,7 @@ def convert_currency(from_currency, to_currency, amount):
 
 
 @db_connection_decorator
-def perform_money_transfer(cursor, sender_account_number, receiver_account_number, amount):
+def perform_money_transfer(cursor, sender_account_number, receiver_account_number, amount, time=None):
     """
        Perform a money transfer between two accounts.
 
@@ -237,6 +250,7 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
            sender_account_number (str): The account number of the sender.
            receiver_account_number (str): The account number of the receiver.
            amount (float): The amount of money to be transferred.
+           time
 
        Returns:
            str: A string indicating the result of the money transfer operation. Possible values include:
@@ -252,11 +266,11 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
         my_logger.warning('Invalid account numbers')
         return 'Invalid account numbers'
 
-    if sender_account[6] < amount:
+    elif sender_account[6] < amount:
         my_logger.warning("There are not enough funds on the sender's account")
         return 'Insufficient balance'
 
-    if sender_account[5] != receiver_account[5]:
+    elif sender_account[5] != receiver_account[5]:
         converted_amount = convert_currency(sender_account[5], receiver_account[5], amount)
         if converted_amount is None:
             return 'Currency conversion error'
@@ -273,12 +287,15 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
     cursor.execute('SELECT Name FROM Bank WHERE Id = ?', (receiver_account[4],))
     bank_receiver_name = cursor.fetchone()
 
+    if not time:
+        time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
     cursor.execute('INSERT INTO TransactionTable (Bank_sender_name, Account_sender_id, '
                    'Bank_receiver_name, Account_receiver_id, Sent_Currency, Sent_Amount, Datetime) '
                    'VALUES (?, ?, ?, ?, ?, ?, ?)',
                    (bank_sender_name[0], sender_account[1], bank_receiver_name[0], receiver_account[1],
                     converted_amount, receiver_account[5],
-                    datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')))
+                    time))
 
     my_logger.info('Money transfer successful')
     return 'Money transfer successful'
@@ -313,4 +330,5 @@ modify_row(table='Account', account_id=7, new_data={'Amount': 8750})
 modify_row('Bank', bank_id=57, new_data={'Name': 'New Bank Name', 'Id': 56})
 delete_row('User', 6)
 
-result = perform_money_transfer(123456789, 567890123, 150)
+perform_money_transfer(123456789, 567890123, 150)
+perform_money_transfer(2471, 678901234, 2700, '2021-06-24 14:28:35')
