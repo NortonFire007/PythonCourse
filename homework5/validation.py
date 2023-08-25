@@ -34,18 +34,16 @@ def validate_strict_account_fields(input_data):
 
 def validate_account_number(account_number):
     account_number = re.sub(r'[#%_?&]', '-', account_number)
+
     if len(account_number) > 18:
         raise ValueError('Account number has too many chars!')
     elif len(account_number) < 18:
         raise ValueError('Account number has too little chars!')
+
     if not account_number.startswith('ID--'):
         raise ValueError("'Wrong format! Account number should start with 'ID--'!'")
+
     if not re.search(r'[a-zA-Z]{1,3}-\d+', account_number):
         raise ValueError('Broken ID!')
 
-    my_logger.info('Account number validation successful.')
-
-
-# 'ID--j3-q-432547-u9'
-
-validate_account_number('ID--j3-q-432547-u9')
+    my_logger.info(f'Account number {account_number} validation successful.')

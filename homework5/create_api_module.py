@@ -1,12 +1,11 @@
 import sqlite3
-import os
 import requests
 import csv
 from logger import setup_logger
 from db_decorator import db_connection_decorator
-import freecurrencyapi
 from datetime import datetime, timezone
-from validation import valid_full_name, validate_strict_account_fields
+from validation import valid_full_name, validate_strict_account_fields, validate_account_number
+import random
 
 API_KEY = 'fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
 URL = f'https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY}'
@@ -28,7 +27,7 @@ def prepare_rows(input_data):
 
 
 @db_connection_decorator
-def add_user(cursor, *input_data):
+def add_user(cursor, input_data):
     """
         Add user information to the database.
         Parameters:
@@ -40,11 +39,12 @@ def add_user(cursor, *input_data):
         Returns:
             None
         """
+    # ids = random.sample(range(1, 10001), len(input_data))
     data = input_data[0] if isinstance(input_data[0], list) else input_data
-    rows = [(name[0], name[1], row['birth_day'], row['accounts']) for row in data for name in
-            [valid_full_name(row['user_full_name'])]]
-
-    cursor.executemany('INSERT INTO User (Name, Surname, Birth_day, Accounts) VALUES (?, ?, ?, ?)', rows)
+    # rows = [(i, *valid_full_name(row['user_full_name']), row['birth_day'], row['accounts'])
+    #         for i, row in zip(ids, data)]
+    rows = [(row['id'], *valid_full_name(row['user_full_name']), row['birth_day'], row['accounts']) for row in data]
+    cursor.executemany('INSERT INTO User (Id, Name, Surname, Birth_day, Accounts) VALUES (?, ?, ?, ?, ?)', rows)
     my_logger.info('Users added successfully')
 
 
@@ -53,6 +53,7 @@ def add_bank(cursor, *input_data):
     """
     Add bank information to the database.
     Parameters:
+        cursor (sqlite3.Connection): The database connection.
         cursor (sqlite3.Connection): The database connection.
         input_data (list or dict): Bank data (id and name) to be added.
     """
@@ -67,120 +68,99 @@ def add_account(cursor, input_data):
     Add account information to the database.
     Parameters:
         cursor (sqlite3.Connection): The database connection.
-        input_data: Account data to be added.
-
+        input_data: Account data to be added. Each element should be a dictionary representing an account,
+            containing keys 'User_id', 'Type', 'Account_Number', 'Bank_id', 'Currency', 'Amount', and 'Status'.
     Returns:
         None
     """
 
     validate_strict_account_fields(input_data)
 
+    for i in input_data:
+        validate_account_number(i['account_number'])
+
     rows = prepare_rows(input_data)
     cursor.executemany('INSERT INTO Account (User_id, Type, Account_Number, Bank_id, Currency, Amount, Status) VALUES '
                        '(?, ?, ?, ?, ?, ?, ?)', rows)
-    my_logger.info('Accounts added to the database successfully')
+    my_logger.info('Accounts added to database successfully')
 
 
 @db_connection_decorator
-def update_data_in_table(conn, table, user_id, new_name):
+def update_data_in_table(cursor, table, user_id, new_name):
     """
     Update the name of a row in the specified table based on the provided user ID.
     Args:
-        conn (sqlite3.Connection): The SQLite database connection.
+        cursor (sqlite3.Connection): The SQLite database connection.
         table (str): The name of the table to update.
         user_id (int): The ID of the user whose name needs to be updated.
         new_name (str): The new name to set for the user.
     """
-    cursor = conn.cursor()
     cursor.execute(f'UPDATE {table} SET Name = ? WHERE Id = ?', (new_name, user_id))
-    conn.commit()
     my_logger.info(f'Name updated successfully in {table}')
 
 
-def add_users_from_csv(path):
+def add_data_from_csv(path, add_data_function):
     """
-    Add user data from a CSV file to the database.
+    Add data from a CSV file to the database using the specified add_function.
     Args:
-        path (str): The path to the CSV file containing user data.
+        path (str): The path to the CSV file containing data.
+        add_data_function (function): The function to add data to the database.
     """
     with open(path, 'r') as csvfile:
         reader = list(csv.DictReader(csvfile))
-        user_data = [{'user_full_name': row['Name'], 'birth_day': row['Birth_day'], 'accounts': row['Accounts']}
-                     for row in reader]
-        return add_user(user_data)
-
-
-def add_banks_from_csv(path):
-    """
-    Add bank data from a CSV file to the database.
-    Args:
-        path (str): The path to the CSV file containing bank data.
-    """
-    with open(path, 'r') as csvfile:
-        reader = list(csv.DictReader(csvfile))
-        bank_data = [{'name': row['Bank'], 'id': row['Id']} for row in reader]
-        return add_bank(bank_data)
-
-
-def add_accounts_from_csv(path):
-    """
-    Add account data from a CSV file to the database.
-    Args:
-        path (str): The path to the CSV file containing account data.
-    """
-    with open(path, 'r') as csvfile:
-        reader = list(csv.DictReader(csvfile))
-        account_data = [{'user_id': row['User_id'], 'type': row['Type'], 'account_number': row['Account Number'],
-                         'bank_id': row['Bank_id'], 'currency': row['Currency'], 'amount': row['Amount'],
-                         'status': row['Status']} for row in reader]
-        return add_account(account_data)
+        return add_data_function(reader)
 
 
 @db_connection_decorator
-def modify_row(cursor, table, user_id=None, bank_id=None, account_id=None, new_data=None):
+def modify_row(cursor, table_name, input_id, new_data):
     """
-    Modify a row in the specified table based on the provided parameters.
+    Modify a row in the specified table_name based on the provided parameters.
     Args:
         cursor (sqlite3.Cursor): The SQLite database cursor.
-        table (str): The name of the table to modify.
-        user_id (int, optional): The ID of the user to modify (default: None).
-        bank_id (int, optional): The ID of the bank to modify (default: None).
-        account_id (int, optional): The ID of the account to modify (default: None).
+        table_name (str): The name of the table_name to modify.
+        input_id (int, optional): The ID of the to modify (default: None).
         new_data (dict): A dictionary containing the new data to update.
     """
     if not new_data:
         my_logger.warning('No new data provided for update')
         return
 
-    id_column = 'Id'
+    query_parts = ', '.join([f'{key} = "{value}"' if isinstance(value, str) else f'{key} = {value}'
+                             for key, value in new_data.items()])
+    query = f'UPDATE {table_name} SET {query_parts} WHERE Id = {input_id}'
 
-    query_parts = [f' {key} = ?' for key in new_data.keys()]
-    query = f'UPDATE {table} SET' + ','.join(query_parts) + f' WHERE {id_column} = ?'
-    params = list(new_data.values())
-    params.append(user_id if user_id else bank_id if bank_id else account_id)
-
-    cursor.execute(query, params)
-    my_logger.info(f'Row in {table} modified successfully')
+    cursor.execute(query)
+    my_logger.info(f'Row in {table_name} modified successfully')
 
 
 @db_connection_decorator
-def delete_row(cursor, table, row_id):
+def delete_if_exists(cursor, table_name, condition):
     """
-    Delete a row from the specified table based on the provided row ID.
+    Delete rows from the specified table based on the given condition.
     Args:
-        cursor (sqlite3.Cursor): The SQLite database cursor.
-        table (str): The name of the table to delete from.
-        row_id (int): The ID of the row to delete.
+        cursor (sqlite3.Cursor): The database cursor to execute the DELETE query.
+        table_name (str): The name of the table from which to delete rows.
+        condition (str): The condition that determines which rows to delete.
+    Returns:
+        None
     """
-    cursor.execute(f'SELECT * FROM {table} WHERE Id = ?', (row_id,))
-    existing_row = cursor.fetchone()
+    cursor.execute(f"DELETE FROM {table_name} WHERE {condition}")
+    if cursor.rowcount > 0:
+        my_logger.info(f'Row with {condition} deleted from {table_name}')
+    else:
+        my_logger.warning(f'Row with {condition} not found in {table_name}')
 
-    if not existing_row:
-        my_logger.warning(f'Row with Id {row_id} not found in {table}')
-        return
 
-    cursor.execute(f'DELETE FROM {table} WHERE Id = ?', (row_id,))
-    my_logger.info(f'Row with Id {row_id} deleted from {table}')
+def delete_row(table_name, condition):
+    """
+    Delete rows from the specified table based on the given condition.
+    Args:
+        table_name (str): The name of the table from which to delete rows.
+        condition (str): The condition that determines which rows to delete.
+    Returns:
+        None
+    """
+    delete_if_exists(table_name, condition)
 
 
 @db_connection_decorator
@@ -232,6 +212,8 @@ def convert_currency(from_currency, to_currency, amount):
          ValueError: If the API response or exchange rate calculation encounters an error.
      """
     response = requests.get(f'{URL}&currencies={from_currency}%2C{to_currency}').json()
+    print('response', response)
+    print('URL:', f'{URL}&currencies={from_currency}%2C{to_currency}&base_currency={from_currency}')
     exchange_rate = response['data'][to_currency]
     return round(amount * exchange_rate, 2)
 
@@ -250,7 +232,7 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
            sender_account_number (str): The account number of the sender.
            receiver_account_number (str): The account number of the receiver.
            amount (float): The amount of money to be transferred.
-           time
+           time (optional) : format ('%Y-%m-%d %H:%M:%S') transaction time
 
        Returns:
            str: A string indicating the result of the money transfer operation. Possible values include:
@@ -277,9 +259,9 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
     else:
         converted_amount = amount
 
-    modify_row(table='Account', account_id=sender_account[0],
+    modify_row('Account', sender_account[0],
                new_data={'Amount': sender_account[6] - amount})
-    modify_row(table='Account', account_id=receiver_account[0],
+    modify_row('Account', receiver_account[0],
                new_data={'Amount': receiver_account[6] + converted_amount})
 
     cursor.execute('SELECT Name FROM Bank WHERE Id = ?', (sender_account[4],))
@@ -287,48 +269,54 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
     cursor.execute('SELECT Name FROM Bank WHERE Id = ?', (receiver_account[4],))
     bank_receiver_name = cursor.fetchone()
 
-    if not time:
+    if time is None:
         time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
     cursor.execute('INSERT INTO TransactionTable (Bank_sender_name, Account_sender_id, '
                    'Bank_receiver_name, Account_receiver_id, Sent_Currency, Sent_Amount, Datetime) '
                    'VALUES (?, ?, ?, ?, ?, ?, ?)',
                    (bank_sender_name[0], sender_account[1], bank_receiver_name[0], receiver_account[1],
-                    converted_amount, receiver_account[5],
-                    time))
+                    converted_amount, receiver_account[5], time))
 
     my_logger.info('Money transfer successful')
     return 'Money transfer successful'
 
 
-users = [
-    {'user_full_name': 'Johni O', 'birth_day': '1992-03-17', 'accounts': '12345'},
-    {'user_full_name': 'Jane Babel', 'birth_day': '1984-07-10', 'accounts': '67890'}
-]
+def main():
+    users = [
+        {'id': 5385, 'user_full_name': 'John O', 'birth_day': '1992-03-17', 'accounts': 'ID--r5-gry-70325-g'},
+        {'id': 9064, 'user_full_name': 'Jane Babel', 'birth_day': '1984-07-10', 'accounts': 'ID--a1-b-123456-x7'}
+    ]
 
-banks_data = [
-    {'name': 'Bank Ad', 'id': 31},
-    {'name': 'Bank B', 'id': 73}
-]
+    banks_data = [
+        {'name': 'Bank Ad', 'id': 31},
+        {'name': 'Bank B', 'id': 73}
+    ]
 
-accounts_data = [
-    {'user_id': 1, 'type': 'debit', 'account_number': '1501', 'bank_id': 1, 'currency': 'USD', 'amount': 5000,
-     'status': 'silver'},
-    {'user_id': 2, 'type': 'credit', 'account_number': '2471', 'bank_id': 2, 'currency': 'EUR', 'amount': 10000,
-     'status': 'gold'}
-]
+    accounts_data = [
+        {'user_id': 5777, 'type': 'debit', 'account_number': 'ID--h5-i-567890-q2', 'bank_id': 1, 'currency': 'USD',
+         'amount': 5000, 'status': 'silver'},
+        {'user_id': 503, 'type': 'credit', 'account_number': 'ID--j3-q-432547-u9', 'bank_id': 2, 'currency': 'EUR',
+         'amount': 10000, 'status': 'gold'}
+    ]
 
-add_user(users)
-add_bank(banks_data)
-add_account(accounts_data)
+    add_user(users)
+    add_bank(banks_data)
+    add_account(accounts_data)
 
-add_banks_from_csv('banks.csv')
-add_accounts_from_csv('accounts.csv')
-add_users_from_csv('users.csv')
+    add_data_from_csv('banks.csv', add_bank)
+    add_data_from_csv('accounts.csv', add_account)
+    add_data_from_csv('users.csv', add_user)
 
-modify_row(table='Account', account_id=7, new_data={'Amount': 8750})
-modify_row('Bank', bank_id=57, new_data={'Name': 'New Bank Name', 'Id': 56})
-delete_row('User', 6)
+    modify_row('Account', 7, {'Amount': 8750})
+    modify_row('Bank', 57, {'Id': 56, 'Name': 'New Bank Name'})
+    delete_row('User', 'Id = 6')
 
-perform_money_transfer(123456789, 567890123, 150)
-perform_money_transfer(2471, 678901234, 2700, '2021-06-24 14:28:35')
+    perform_money_transfer('ID--r5-gry-70325-g', 'ID--u0-vuv-6819-u1', 150)
+    perform_money_transfer('ID--j3-q-432547-u9', 'ID--f4-ggg-90123-g', 3200, '2022-08-19 11:42:24')
+    perform_money_transfer('ID--j3-q-432547-u9', 'ID--u0-vuv-6819-u1', 1500)
+    perform_money_transfer('ID--f4-ggg-90123-g', 'ID--u0-vuv-6819-u1', 15000)
+
+
+if __name__ == "__main__":
+    main()

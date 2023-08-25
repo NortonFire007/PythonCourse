@@ -49,6 +49,16 @@ def create_database(uniqueness):
         )''')
 
     conn.commit()
+    cursor.close()
+    conn.close()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Create an initial database structure.')
+    parser.add_argument('--uniqueness', action='store_true')
+    args = parser.parse_args()
+
+    create_database(args.uniqueness)
 
     # bank_data = [(46, 'PrivatBank'), (17, 'AlphaBank'), (93, 'Monobank')]
     # cursor.executemany('INSERT INTO Bank (Id, Name) VALUES (?, ?)', bank_data)
@@ -75,15 +85,3 @@ def create_database(uniqueness):
     #
     # cursor.execute('UPDATE User SET Name = "Bob" WHERE Birth_day = 1990')
     # cursor.execute('DELETE FROM Account WHERE Type = "credit" ')
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Create an initial database structure.')
-    parser.add_argument('--uniqueness', action='store_true')
-    args = parser.parse_args()
-
-    create_database(args.uniqueness)
