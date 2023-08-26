@@ -22,6 +22,13 @@ def valid_full_name(full_name):
 
 
 def validate_strict_account_fields(input_data):
+    """
+    Validate the fields 'type' and 'status' in the input data.
+    Args:
+        input_data (list of dict): List of dictionaries containing account information.
+    Raises:
+        ValueError: If any of the 'type' or 'status' values are not allowed.
+    """
     allowed_types = ['credit', 'debit']
     allowed_statuses = ['gold', 'silver', 'platinum']
 
@@ -34,7 +41,13 @@ def validate_strict_account_fields(input_data):
 
 def validate_account_number(account_number):
     account_number = re.sub(r'[#%_?&]', '-', account_number)
-
+    """
+    Validate the format of an account number.
+    Args:
+        account_number (str): Account number to be validated.
+    Raises:
+        ValueError: If the account number format is invalid.
+    """
     if len(account_number) > 18:
         raise ValueError('Account number has too many chars!')
     elif len(account_number) < 18:

@@ -53,13 +53,13 @@ def convert_currency(from_currency, to_currency, amount):
          KeyError: If the API response does not contain the necessary exchange rate information.
          ValueError: If the API response or exchange rate calculation encounters an error.
      """
-    response = requests.get(f'{URL}&currencies={from_currency}%2C{to_currency}').json()
+    response = requests.get(f'{URL}&currencies={to_currency}&base_currency={from_currency}').json()
     exchange_rate = response['data'][to_currency]
     return round(amount * exchange_rate, 2)
 
 
 @db_connection_decorator
-def perform_money_transfer(cursor, sender_account_number, receiver_account_number, amount):
+def perform_money_transfer(cursor, sender_account_number, receiver_account_number, amount, time=None):
     """
        Perform a money transfer between two accounts.
 
@@ -72,6 +72,7 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
            sender_account_number (str): The account number of the sender.
            receiver_account_number (str): The account number of the receiver.
            amount (float): The amount of money to be transferred.
+           time (optional) : format ('%Y-%m-%d %H:%M:%S') transaction time
 
        Returns:
            str: A string indicating the result of the money transfer operation. Possible values include:
@@ -87,28 +88,35 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
         my_logger.warning('Invalid account numbers')
         return 'Invalid account numbers'
 
-    if sender_account[6] < amount:
+    elif sender_account[6] < amount:
         my_logger.warning("There are not enough funds on the sender's account")
         return 'Insufficient balance'
 
-    if sender_account[5] != receiver_account[5]:
+    elif sender_account[5] != receiver_account[5]:
         converted_amount = convert_currency(sender_account[5], receiver_account[5], amount)
         if converted_amount is None:
             return 'Currency conversion error'
     else:
         converted_amount = amount
 
-    modify_row(table='Account', account_id=sender_account[0],
+    modify_row('Account', sender_account[0],
                new_data={'Amount': sender_account[6] - amount})
-    modify_row(table='Account', account_id=receiver_account[0],
+    modify_row('Account', receiver_account[0],
                new_data={'Amount': receiver_account[6] + converted_amount})
+
+    cursor.execute('SELECT Name FROM Bank WHERE Id = ?', (sender_account[4],))
+    bank_sender_name = cursor.fetchone()
+    cursor.execute('SELECT Name FROM Bank WHERE Id = ?', (receiver_account[4],))
+    bank_receiver_name = cursor.fetchone()
+
+    if time is None:
+        time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
     cursor.execute('INSERT INTO TransactionTable (Bank_sender_name, Account_sender_id, '
                    'Bank_receiver_name, Account_receiver_id, Sent_Currency, Sent_Amount, Datetime) '
                    'VALUES (?, ?, ?, ?, ?, ?, ?)',
-                   (sender_account[4], sender_account[1], receiver_account[0], receiver_account[1],
-                    converted_amount, receiver_account[5],
-                    datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')))
+                   (bank_sender_name[0], sender_account[1], bank_receiver_name[0], receiver_account[1],
+                    converted_amount, receiver_account[5], time))
 
     my_logger.info('Money transfer successful')
     return 'Money transfer successful'

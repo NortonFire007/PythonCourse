@@ -2,7 +2,8 @@ import random
 from db_decorator import db_connection_decorator
 from logger import setup_logger
 from datetime import datetime, timedelta
-from create_api_module import delete_row, convert_currency
+from create_api_module import delete_row
+from money_transfer import convert_currency
 
 API_KEY = 'fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
 URL = f'https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY}'
@@ -70,12 +71,10 @@ def get_bank_with_the_biggest_capital():
         list: A list containing the name(s) of the bank(s) with the highest capital.
     """
     result = get_data_from_table('Account', 'Bank_id, Amount, Currency')
-    print(result)
     converted_currency = [(r[0], convert_currency(r[2], 'USD', r[1])) for r in result]
-    print(converted_currency)
     max_amount = max(converted_currency, key=lambda item: item[1])
     result = get_data_from_table('Bank', 'Id, Name')
-    return [r[1] for r in result if r[0] == max_amount[0]]  # проблема с переводом денег
+    return [r[1] for r in result if r[0] == max_amount[0]]
 
 
 @db_connection_decorator
@@ -116,12 +115,10 @@ def get_the_oldest_client_bank(cursor):
 def delete_accounts_and_users_without_full_info():
     """ Deletes user accounts and users that have missing or empty information fields. """
     row = get_data_from_table('User', '*')
-    print(row)
     delete_row('User', "Name IS NULL OR Name = '' OR Surname IS NULL OR Birth_day IS NULL OR Birth_day = '' ")
     account_data = get_data_from_table('User', 'id')
     unique_user_ids = [item[0] for item in account_data]
     user_ids_str = ', '.join(map(str, unique_user_ids))
-    print(unique_user_ids)
     delete_row('Account', f'user_id NOT IN ({user_ids_str})')
 
 
@@ -139,10 +136,6 @@ def get_user_last_three_months_transactions(user_id):
                                f"Account_sender_id = {user_id} AND Datetime >= '{three_months_ago}'")
 
 
-# x = get_user_last_three_months_transactions(503)
-# print(x)
-
-
 def get_bank_with_highest_unique_outbound_users():
     """
      Get the bank with the highest number of unique users who performed outbound transactions.
@@ -151,7 +144,6 @@ def get_bank_with_highest_unique_outbound_users():
      """
     transactions_data = get_data_from_table('TransactionTable', 'Bank_sender_name, Account_sender_id')
     # transactions_data2 = list(cursor.execute(f'SELECT Bank_sender_name, Account_sender_id FROM TransactionTable'))
-    print(transactions_data)
 
     bank_id_counts = {}
 
