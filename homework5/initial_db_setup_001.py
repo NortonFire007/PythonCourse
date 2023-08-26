@@ -59,29 +59,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     create_database(args.uniqueness)
-
-    # bank_data = [(46, 'PrivatBank'), (17, 'AlphaBank'), (93, 'Monobank')]
-    # cursor.executemany('INSERT INTO Bank (Id, Name) VALUES (?, ?)', bank_data)
-    #
-    # transaction_data = [('AlphaBank', 'Account1', 'PrivatBank', 'Account2', 'USD', 100.0, '2023-08-01'),
-    #                     ('Monobank', 'Account3', 'Monobank', 'Account1', 'EUR', 150.0, '2023-08-02')]
-    # cursor.executemany(
-    #     'INSERT INTO TransactionTable '
-    #     '(Bank_sender_name, Account_sender_id, Bank_receiver_name, Account_receiver_id, Sent_Currency, '
-    #     'Sent_Amount, Datetime) VALUES(?, ?, ?, ?, ?, ?, ?)', transaction_data)
-    #
-    # users = [('User1', 'Surname1', 1990, 'Account1, Account2'), ('User2', 'Surname2', 1985, 'Account3'),
-    #          ('User3', 'Surname3', 2000, 'Account4, Account5')]
-    # cursor.executemany('INSERT INTO User (Name, Surname, Birth_day, Accounts) VALUES (?, ?, ?, ?)', users)
-    #
-    # accounts = [
-    #     (1, 'credit', '1234567890', 1, 'USD', 1000.0, 'gold'),
-    #     (2, 'debit', '9876543210', 2, 'EUR', 500.0, 'silver'),
-    #     (3, 'debit', '9876573210', 3, 'EUR', 500.0, 'silver')
-    # ]
-    # cursor.executemany('''INSERT INTO Account
-    #                        (User_id, Type, Account_Number, Bank_id, Currency, Amount, Status)
-    #                        VALUES (?, ?, ?, ?, ?, ?, ?)''', accounts)
-    #
-    # cursor.execute('UPDATE User SET Name = "Bob" WHERE Birth_day = 1990')
-    # cursor.execute('DELETE FROM Account WHERE Type = "credit" ')

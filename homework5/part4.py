@@ -114,7 +114,6 @@ def get_the_oldest_client_bank(cursor):
 
 def delete_accounts_and_users_without_full_info():
     """ Deletes user accounts and users that have missing or empty information fields. """
-    row = get_data_from_table('User', '*')
     delete_row('User', "Name IS NULL OR Name = '' OR Surname IS NULL OR Birth_day IS NULL OR Birth_day = '' ")
     account_data = get_data_from_table('User', 'id')
     unique_user_ids = [item[0] for item in account_data]
@@ -143,7 +142,6 @@ def get_bank_with_highest_unique_outbound_users():
          str: Name of the bank with the highest number of unique users for outbound transactions.
      """
     transactions_data = get_data_from_table('TransactionTable', 'Bank_sender_name, Account_sender_id')
-    # transactions_data2 = list(cursor.execute(f'SELECT Bank_sender_name, Account_sender_id FROM TransactionTable'))
 
     bank_id_counts = {}
 
