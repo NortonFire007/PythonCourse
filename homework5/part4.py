@@ -5,9 +5,6 @@ from datetime import datetime, timedelta
 from create_api_module import delete_row
 from money_transfer import convert_currency
 
-API_KEY = 'fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
-URL = f'https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY}'
-
 DISCOUNT_LIST = [25, 30, 50]
 
 my_logger = setup_logger()
@@ -51,7 +48,7 @@ def get_debtors_names():
       Returns:
           list: A list of usernames who have debts.
       """
-    accounts = get_data_from_table('Account', 'Account_Number', 'amount < 5500')
+    accounts = get_data_from_table('Account', 'Account_Number', 'amount < 0')
     if accounts:
         accounts_debtors_list = [row[0] for row in accounts]
 

@@ -4,8 +4,7 @@ from datetime import datetime, timezone
 import requests
 from create_api_module import modify_row
 
-API_KEY = 'fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
-URL = f'https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY}'
+URL = f'https://api.freecurrencyapi.com/v1/latest?apikey=fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
 
 my_logger = setup_logger()
 

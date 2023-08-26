@@ -4,9 +4,6 @@ from logger import setup_logger
 from db_decorator import db_connection_decorator
 from validation import valid_full_name, validate_strict_account_fields, validate_account_number
 
-API_KEY = 'fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
-URL = f'https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY}'
-
 my_logger = setup_logger()
 
 
