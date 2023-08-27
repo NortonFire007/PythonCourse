@@ -143,7 +143,7 @@ def create_subfolders(destination_folder, data):
 def remove_data_before_certain_decade(folder_path, decade):
     contents = os.listdir(folder_path)
     for f in contents:
-        if f[:2].isdigit() and int(f[:2]) < decade and int(f[:2]) != 0:
+        if f[:2].isdigit() and 0 < int(f[:2]) < decade:
             file_path = os.path.join(folder_path, f)
             if os.path.isdir(file_path):
                 shutil.rmtree(file_path)
@@ -210,7 +210,6 @@ def main(output_folder, output_filename, log_lev, gender=None, num_rows=None):
 
     write_data_in_csv(os.path.join(output_folder, output_filename), filtered_data)
     new_data = rearrange_data(filtered_data)
-    # move_file_to_destination('user_accounts_csv.csv', output_folder)
     create_subfolders(output_folder, new_data)
     remove_data_before_certain_decade(output_folder, 60)
     log_full_folder_structure(output_folder, level=0)
