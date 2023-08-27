@@ -150,7 +150,7 @@ def main():
     most_popular_genres = movie_grabber.names_of_most_popular_genres(count=5)
     print(f'\nTask 8:\nMost popular genres:')
     for genre, occurrences in most_popular_genres:
-        print('f"{genre} genre occurs {occurrences} times"')
+        print(f'{genre} genre occurs {occurrences} times')
 
     titles_in_pairs = movie_grabber.group_titles_in_pairs_by_common_genres()
     print(f'\nTask 9:\nCollection of film titles grouped in pairs by common genres:\n {titles_in_pairs}')
