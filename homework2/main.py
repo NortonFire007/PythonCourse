@@ -2,7 +2,6 @@ import requests
 from collections import Counter
 from datetime import datetime, timedelta
 import csv
-import copy
 
 FIELD_NAMES = ['title', 'popularity', 'score', 'last_day_in_cinema']
 API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTI3NGFmYTRlNTUyMjRjYzRlN2Q0NmNlMTNkOTZjOSIsInN1YiI6IjVkNmZhMWZmNzdjMDFmMDAxMDU5NzQ4OSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.lbpgyXlOXwrbY0mUmP-zQpNAMCw_h-oaudAJB6Cn5c8'
@@ -76,7 +75,8 @@ class MovieDataGrabber:
     def names_of_most_popular_genres(self, count=1):
         all_genre_ids = [genre_id for movie in self.data for genre_id in movie.get('genre_ids', [])]
         most_common_genre_ids = Counter(all_genre_ids).most_common(count)
-        return [(next(item['name'] for item in self.genres_data if item['id'] == id_val), score_val)
+        genre_id_to_name = {item['id']: item['name'] for item in self.genres_data}
+        return [(genre_id_to_name[id_val], score_val)
                 for id_val, score_val in most_common_genre_ids]
 
     def group_titles_in_pairs_by_common_genres(self):
@@ -90,9 +90,9 @@ class MovieDataGrabber:
 
     @staticmethod
     def calculate_last_day_in_cinema(date):
-        return (datetime.strptime(date, "%Y-%m-%d") + timedelta(weeks=10)).strftime("%Y-%m-%d")
+        return (datetime.strptime(date, '%Y-%m-%d') + timedelta(weeks=10)).strftime('%Y-%m-%d')
 
-    def x(self, movie):
+    def transform_movie_data(self, movie):
         return {
             'title': movie.get('title', ''),
             'popularity': round(movie.get('popularity', 0), 1),
@@ -101,7 +101,8 @@ class MovieDataGrabber:
         }
 
     def make_collections_with_structure(self):
-        return sorted(map(self.x, self.data), key=lambda x: (x['popularity'], x['score']), reverse=True)
+        return sorted(map(self.transform_movie_data, self.data), key=lambda x: (x['popularity'], x['score']),
+                      reverse=True)
 
     @staticmethod
     def write_to_csv(movie_data, file_path):
@@ -149,7 +150,7 @@ def main():
     most_popular_genres = movie_grabber.names_of_most_popular_genres(count=5)
     print(f'\nTask 8:\nMost popular genres:')
     for genre, occurrences in most_popular_genres:
-        print(f"{genre} genre occurs {occurrences} times")
+        print('f"{genre} genre occurs {occurrences} times"')
 
     titles_in_pairs = movie_grabber.group_titles_in_pairs_by_common_genres()
     print(f'\nTask 9:\nCollection of film titles grouped in pairs by common genres:\n {titles_in_pairs}')
