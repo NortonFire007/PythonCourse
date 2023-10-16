@@ -2,7 +2,7 @@ from db_decorator import db_connection_decorator
 from logger import setup_logger
 from datetime import datetime, timezone
 import requests
-from create_api_module import modify_row
+from create_api_module import modify_account_row
 
 URL = f'https://api.freecurrencyapi.com/v1/latest?apikey=fca_live_4uqhXfyZENDdm83mAzfXYpguR4kCOXDt76l5cEIl'
 
@@ -98,10 +98,12 @@ def perform_money_transfer(cursor, sender_account_number, receiver_account_numbe
     else:
         converted_amount = amount
 
-    modify_row('Account', sender_account[0],
-               new_data={'Amount': sender_account[6] - amount})
-    modify_row('Account', receiver_account[0],
-               new_data={'Amount': receiver_account[6] + converted_amount})
+    # modify_row('Account', sender_account[0],
+    #            new_data={'Amount': sender_account[6] - amount})
+    # modify_row('Account', receiver_account[0],
+    #            new_data={'Amount': receiver_account[6] + converted_amount})
+    modify_account_row(sender_account[0], new_data={'Amount': sender_account[6] - amount})
+    modify_account_row(receiver_account[0], new_data={'Amount': receiver_account[6] + converted_amount})
 
     cursor.execute('SELECT Name FROM Bank WHERE Id = ?', (sender_account[4],))
     bank_sender_name = cursor.fetchone()

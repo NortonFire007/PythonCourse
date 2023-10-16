@@ -2,7 +2,7 @@ import random
 from db_decorator import db_connection_decorator
 from logger import setup_logger
 from datetime import datetime, timedelta
-from create_api_module import delete_row
+from create_api_module import delete_user_row, delete_account_row
 from money_transfer import convert_currency
 
 DISCOUNT_LIST = [25, 30, 50]
@@ -24,7 +24,7 @@ def get_data_from_table(cursor, table_name, fields, condition=None):
        """
     cursor.execute(f'SELECT {fields} FROM {table_name} WHERE {condition}') if condition \
         else cursor.execute(f'SELECT {fields} FROM {table_name}')
-    return cursor.fetchall()
+    return cursor.fetchall()  # переменная для WHERE {condition}
 
 
 def randomly_choose_users_for_discount():
@@ -91,11 +91,11 @@ def get_the_oldest_client_bank(cursor):
     SELECT Bank_id
     FROM Account
     WHERE account_number IN ({})
-    """.format(', '.join(['?'] * len(result)))
+    """.format(', '.join(['?'] * len(result)))  # format(', '.join(['?, '] * len(result))[:-2])
 
     cursor.execute(query, result)
-    ans = cursor.fetchall()
-    ans = [i[0] for i in ans]
+    # ans = cursor.fetchall()
+    ans = [i[0] for i in cursor.fetchall()]
     query = """
         SELECT Name
         FROM Bank
@@ -111,11 +111,11 @@ def get_the_oldest_client_bank(cursor):
 
 def delete_accounts_and_users_without_full_info():
     """ Deletes user accounts and users that have missing or empty information fields. """
-    delete_row('User', "Name IS NULL OR Name = '' OR Surname IS NULL OR Birth_day IS NULL OR Birth_day = '' ")
+    delete_user_row("Name IS NULL OR Name = '' OR Surname IS NULL OR Birth_day IS NULL OR Birth_day = '' ")
     account_data = get_data_from_table('User', 'id')
     unique_user_ids = [item[0] for item in account_data]
     user_ids_str = ', '.join(map(str, unique_user_ids))
-    delete_row('Account', f'user_id NOT IN ({user_ids_str})')
+    delete_account_row(f'user_id NOT IN ({user_ids_str})')
 
 
 def get_user_last_three_months_transactions(user_id):

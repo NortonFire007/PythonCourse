@@ -5,7 +5,6 @@ import argparse
 # PART 1.
 def create_database(uniqueness):
     conn = sqlite3.connect('my_data.db')
-
     cursor = conn.cursor()
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS Bank (
@@ -24,15 +23,15 @@ def create_database(uniqueness):
                     Datetime TEXT
                 )''')
 
-    user_name_constraint, user_surname_constraint = ('UNIQUE', 'UNIQUE') if uniqueness else ('', '')
+    user_name_constraint = 'UNIQUE' if uniqueness else ''
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS User (
+    cursor.execute(f'''CREATE TABLE IF NOT EXISTS User (
                     Id INTEGER PRIMARY KEY,
-                    Name TEXT NOT NULL {name_constraint},
-                    Surname TEXT NOT NULL {surname_constraint},
-                    Birth_day INTEGER,
+                    Name TEXT NOT NULL {user_name_constraint},
+                    Surname TEXT NOT NULL {user_name_constraint},
+                    Birth_day INTEGER, 
                     Accounts TEXT NOT NULL
-                )'''.format(name_constraint=user_name_constraint, surname_constraint=user_surname_constraint))
+                )''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Account (
@@ -53,9 +52,12 @@ def create_database(uniqueness):
     conn.close()
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Create an initial database structure.')
     parser.add_argument('--uniqueness', action='store_true')
     args = parser.parse_args()
 
     create_database(args.uniqueness)
+
+    if __name__ == '__main__':
+        main()

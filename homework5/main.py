@@ -33,7 +33,7 @@ def main():
 
     create_api_module.modify_row('Account', 7, {'Amount': 8750})
     create_api_module.modify_row('Bank', 57, {'Id': 56, 'Name': 'New Bank Name'})
-    create_api_module.delete_row('User', 'Id = 6')
+    create_api_module.delete_user_row('Id = 6')
 
     perform_money_transfer('ID--r5-gry-70325-g', 'ID--u0-vuv-6819-u1', 150)
     perform_money_transfer('ID--j3-q-432547-u9', 'ID--f4-ggg-90123-g', 3200, '2022-08-19 11:42:24')

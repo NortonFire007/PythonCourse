@@ -40,7 +40,7 @@ def add_user(cursor, input_data):
 
 
 @db_connection_decorator
-def add_bank(cursor, *input_data):
+def add_bank(cursor, input_data):
     """
     Add bank information to the database.
     Parameters:
@@ -77,17 +77,17 @@ def add_account(cursor, input_data):
 
 
 @db_connection_decorator
-def update_data_in_table(cursor, table, user_id, new_name):
+def update_data_in_table(cursor, table, params, user_id):
     """
     Update the name of a row in the specified table based on the provided user ID.
     Args:
         cursor (sqlite3.Connection): The SQLite database connection.
         table (str): The name of the table to update.
+        params (str): The new data.
         user_id (int): The ID of the user whose name needs to be updated.
-        new_name (str): The new name to set for the user.
     """
-    cursor.execute(f'UPDATE {table} SET Name = ? WHERE Id = ?', (new_name, user_id))
-    my_logger.info(f'Name updated successfully in {table}')
+    cursor.execute(f'UPDATE {table} SET {params} WHERE Id = {user_id}')
+    my_logger.info(f'Info updated successfully in {table}')
 
 
 def add_data_from_csv(path, add_data_function):
@@ -102,12 +102,10 @@ def add_data_from_csv(path, add_data_function):
         return add_data_function(reader)
 
 
-@db_connection_decorator
-def modify_row(cursor, table_name, input_id, new_data):
+def modify_row(table_name, input_id, new_data):
     """
     Modify a row in the specified table_name based on the provided parameters.
     Args:
-        cursor (sqlite3.Cursor): The SQLite database cursor.
         table_name (str): The name of the table_name to modify.
         input_id (int, optional): The ID of the to modify (default: None).
         new_data (dict): A dictionary containing the new data to update.
@@ -118,14 +116,32 @@ def modify_row(cursor, table_name, input_id, new_data):
 
     query_parts = ', '.join([f'{key} = "{value}"' if isinstance(value, str) else f'{key} = {value}'
                              for key, value in new_data.items()])
-    query = f'UPDATE {table_name} SET {query_parts} WHERE Id = {input_id}'
-
-    cursor.execute(query)
+    update_data_in_table(table_name, query_parts, input_id)
     my_logger.info(f'Row in {table_name} modified successfully')
 
 
+def modify_account_row(input_id, new_data):
+    """
+    Modify a row in the Account table based on the provided parameters.
+    Args:
+        input_id (int, optional): The ID of the to modify (default: None).
+        new_data (dict): A dictionary containing the new data to update.
+    """
+    modify_row('Account', input_id, new_data)
+
+
+def modify_bank_row(input_id, new_data):
+    """
+    Modify a row in the Bank table based on the provided parameters.
+    Args:
+        input_id (int, optional): The ID of the to modify (default: None).
+        new_data (dict): A dictionary containing the new data to update.
+    """
+    modify_row('Bank', input_id, new_data)
+
+
 @db_connection_decorator
-def delete_if_exists(cursor, table_name, condition):
+def delete_by_condition(cursor, table_name, condition):
     """
     Delete rows from the specified table based on the given condition.
     Args:
@@ -142,13 +158,23 @@ def delete_if_exists(cursor, table_name, condition):
         my_logger.warning(f'Row with {condition} not found in {table_name}')
 
 
-def delete_row(table_name, condition):
+def delete_user_row(condition):
     """
-    Delete rows from the specified table based on the given condition.
+    Delete rows from the User table based on the given condition.
     Args:
-        table_name (str): The name of the table from which to delete rows.
         condition (str): The condition that determines which rows to delete.
     Returns:
         None
     """
-    delete_if_exists(table_name, condition)
+    delete_by_condition('User', condition)
+
+
+def delete_account_row(condition):
+    """
+    Delete rows from the Account table based on the given condition.
+    Args:
+        condition (str): The condition that determines which rows to delete.
+    Returns:
+        None
+    """
+    delete_by_condition('Account', condition)
