@@ -133,16 +133,16 @@ def draw_pie_chart(forecast_days):
     plt.show()
 
 
-def draw_histogram():
-    data = get_data(UZH_CITY_LATITUDE, UZH_CITY_LONGITUDE, (HOURLY_WINDSPEED,), 1)
-    plt.style.use('_mpl-gallery')
+def draw_histogram(forecast_days):
+    data = get_data(UZH_CITY_LATITUDE, UZH_CITY_LONGITUDE, (HOURLY_WINDSPEED,), forecast_days)
     x = data['hourly'][HOURLY_WINDSPEED]
 
-    plt.style.use('fivethirtyeight')
-    plt.hist(x, bins=8, edgecolor='k', alpha=0.7)
-    plt.title('Hourly wind speed data for Uzhhorod city')
-    plt.ylabel('Hours')
-    plt.ylabel('Windspeed_10m')
+    fig, ax = plt.subplots()
+
+    ax.hist(x, bins=8, edgecolor='k', alpha=0.7)
+    ax.set_title(f'Hourly wind speed data for Uzhhorod for {forecast_days} days')
+    ax.set_ylabel('?')
+    ax.set_xlabel('Windspeed (m/s)')
     plt.savefig('histogram.png')
     plt.show()
 
@@ -157,7 +157,7 @@ def draw_scatter_plot(dim=2):
             If dim is 3, it will create a 3D scatter plot of Temperature vs. Cloudcover vs. Humidity.
     """
     data = get_data(UZH_CITY_LATITUDE, UZH_CITY_LONGITUDE,
-                    (HOURLY_TEMPERATURE, HOURLY_WINDSPEED, HOURLY_CLOUDCOVER, HOURLY_PRECIPITATION, HOURLY_HUMIDITY), 1)
+                    (HOURLY_TEMPERATURE, HOURLY_WINDSPEED, HOURLY_CLOUDCOVER, HOURLY_PRECIPITATION, HOURLY_HUMIDITY), 7)
 
     temperature = data['hourly'][HOURLY_TEMPERATURE]
     cloudcover = data['hourly'][HOURLY_CLOUDCOVER]
@@ -169,7 +169,6 @@ def draw_scatter_plot(dim=2):
 
     # Отмечаем точки как треугольники, если есть осадки
     is_precipitation = [p > 0 for p in precipitation]
-
     marker_size = np.array(wind_speed) * 4
 
     if dim == 2:
@@ -205,6 +204,6 @@ if __name__ == "__main__":
     draw_line_chart(16)
     draw_bar_chart(7)
     draw_pie_chart(3)
-    draw_histogram()
+    draw_histogram(7)
     draw_scatter_plot()
     draw_scatter_plot(3)
