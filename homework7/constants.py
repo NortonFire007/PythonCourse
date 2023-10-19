@@ -1,0 +1,22 @@
+BASE_URL = 'https://api.open-meteo.com/v1/forecast?'
+
+HOURLY_TEMPERATURE = 'temperature_2m'
+HOURLY_HUMIDITY = 'relativehumidity_2m'
+HOURLY_PRECIPITATION = 'precipitation'
+HOURLY_RAIN = 'rain'
+HOURLY_CLOUDCOVER = 'cloudcover'
+HOURLY_CLOUDCOVER_LOW = 'cloudcover_low'
+HOURLY_CLOUDCOVER_MID = 'cloudcover_mid'
+HOURLY_CLOUDCOVER_HIGH = 'cloudcover_high'
+HOURLY_WINDSPEED = 'windspeed_10m'
+
+DAILY_RAIN_SUM = 'rain_sum'
+DAILY_TEMP_MAX = 'temperature_2m_max'
+DAILY_TEMP_MIN = 'temperature_2m_min'
+
+UZH_CITY_LATITUDE = '48.62'
+UZH_CITY_LONGITUDE = '22.28'
+KHARKIV_CITY_LATITUDE = '49.99'
+KHARKIV_CITY_LONGITUDE = '36.23'
+KYIW_CITY_LATITUDE = '50.45'
+KYIW_CITY_LONGITUDE = '30.52'
